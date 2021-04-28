@@ -18,7 +18,7 @@ int main() {
         double answer_n = (-b - sqrt(d)) / (2.0 * a);
         printf("%.6f\n%.6f\n", answer_p, answer_n);
     } else if (d == 0) {
-        double answer = (-b + sqrt(d)) / (2.0 * a);
+        double answer = -b / (2.0 * a);
         printf("%.6f(multiple root)\n", answer);
     } else {
         double answer_r = -b / (2.0 * a);
