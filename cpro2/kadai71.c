@@ -14,4 +14,5 @@ int main() {
         ++len;
     }
     printf("%s\n", str);
+    return 0;
 }
