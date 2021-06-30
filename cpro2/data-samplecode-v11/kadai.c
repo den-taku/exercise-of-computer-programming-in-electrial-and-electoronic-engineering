@@ -24,6 +24,7 @@ static void add(int n, const float *x, float *o);
 static void scale(int n, float x, float *o);
 static void init(int n, float x, float *o);
 static void rand_init(int n, float *o);
+static int inference6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, float *y);
 
 int main() {
     srand((unsigned int)time(NULL));
@@ -44,6 +45,7 @@ int main() {
 	  volatile float z = x/y;
 	#endif
 
+	/* NN3
 	const int epoch = 10;
 	const int mini_batch = 100;
 	const float learning_rate = 0.1;
@@ -105,23 +107,24 @@ int main() {
 	free(y);
 	free(dEdA);
 	free(dEdb);
+	*/
 
 
 	// float *y = malloc(sizeof(float) * 10);
-	// int ans = inference3(A_784x10, b_784x10, train_x, y);
+	// int ans = inference6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, train_x, y);
 	// print(1, 10, y);
 	// printf("%d %d\n", ans, train_y[0]);
 	// free(y);
 
-	// int sum = 0;
-	// float *y = malloc(sizeof(float) * 10);
-	// rep(i, test_count) {
-	// 	if(inference3(A_784x10, b_784x10, test_x + i * width * height, y) == test_y[i]) {
-	// 		++sum;
-	// 	}
-	// }
-	// free(y);
-	// printf("%f%%\n", sum * 100.0 / test_count);
+	int sum = 0;
+	float *y = malloc(sizeof(float) * 10);
+	rep(i, test_count) {
+		if(inference6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, test_x + i * width * height, y) == test_y[i]) {
+			++sum;
+		}
+	}
+	free(y);
+	printf("%f%%\n", sum * 100.0 / test_count);
 
 	// float *y = malloc(sizeof(float) * 10);
 	// float *dEdA = malloc(sizeof(float) * 784 * 10);
@@ -338,6 +341,23 @@ inline static void rand_init(int n, float *o) {
 	}
 }
 
+inline static int inference6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, float *y) {
+	// A1: 50x784, b1: 50, x: 784
+	// A2: 100x50, b2: 100,
+	// A3: 10x100, b3: 10,
+	float *y1 = malloc(sizeof(float) * 50);
+	float *y2 = malloc(sizeof(float) * 100);
+	fc(50, 784, x, A1, b1, y1);
+	relu(50, y1, y1);
+	fc(100, 50, y1, A2, b2, y2);
+	relu(100, y2, y2);
+	fc(10, 100, y2, A3, b3, y);
+	softmax(10, y, y);
+	int max = (int)max_index(10, y);
+	free(y1);
+	free(y2);
+	return max;
+}
 //   // これ以降，３層NN の係数 A_784x10 および b_784x10 と，
 //   // 訓練データ train_x + 784*i (i=0,...,train_count-1), train_y[0]～train_y[train_count-1],
 //   // テストデータ test_x + 784*i (i=0,...,test_count-1), test_y[0]～test_y[test_count-1],
