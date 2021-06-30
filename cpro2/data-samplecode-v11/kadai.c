@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-static void print(int m, int n, const float *x);
-static void print_int(int m, int n, const int *x);
+// static void print(int m, int n, const float *x);
+// static void print_int(int m, int n, const int *x);
 static void fc(int m, int n, const float *x, const float *A, const float *b, float *y);
 static void relu(int n, const float *x, float *y);
 static float max(int n, const float *data);
@@ -403,85 +403,28 @@ int main(int argc, char *argv[]) {
 	default:
 		break;
 	}
-	
-	// float *y = malloc(sizeof(float) * 10);
-	// int ans = inference6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, train_x, y);
-	// print(1, 10, y);
-	// printf("%d %d\n", ans, train_y[0]);
-	// free(y);
-
-	// int sum = 0;
-	// float *y = malloc(sizeof(float) * 10);
-	// rep(i, test_count) {
-	// 	if(inference6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, test_x + i * width * height, y) == test_y[i]) {
-	// 		++sum;
-	// 	}
-	// }
-	// free(y);
-	// printf("%f%%\n", sum * 100.0 / test_count);
-
-	// float *y = malloc(sizeof(float) * 10);
-	// float *dEdA = malloc(sizeof(float) * 784 * 10);
-	// float *dEdb = malloc(sizeof(float) * 10);
-	// backward3(A_784x10, b_784x10, train_x + 784 * 8, train_y[8], y, dEdA, dEdb);
-	// print(10, 784, dEdA);
-	// print(1, 10, dEdb);
-	// free(y);
-	// free(dEdA);
-	// free(dEdb);
-
-	// float *y = malloc(sizeof(float) * 10);
-	// float *dEdA1 = malloc(sizeof(float) * 50 * 784);
-	// float *dEdA2 = malloc(sizeof(float) * 100 * 50);
-	// float *dEdA3 = malloc(sizeof(float) * 10 * 100);
-	// float *dEdb1 = malloc(sizeof(float) * 50);
-	// float *dEdb2 = malloc(sizeof(float) * 100);
-	// float *dEdb3 = malloc(sizeof(float) * 10);
-	// backward6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, train_x + 784 * 8, train_y[8], y, dEdA1, dEdb1, dEdA2, dEdb2, dEdA3, dEdb3);
-	// // print(50, 784, dEdA1);
-	// // print(1, 50, dEdb1);
-	// print(1, 10, y);
-	// free(y);
-	// free(dEdA1);
-	// free(dEdA2);
-	// free(dEdA3);
-	// free(dEdb1);
-	// free(dEdb2);
-	// free(dEdb3);
-
-	// int *index = malloc(sizeof(int) * train_count);
-	// rep(i, train_count) {
-	// 	index[i] = i;
-	// }
-	// print_int(1, 100, index);
-	// shuffle(train_count, index);
-	// print_int(1, 100, index);
-	// free(index);
-
-	// print(1, 10, y);
-
 	return 0;
 }
 
-inline static void print(int m, int n, const float *x) {
-    int i, j;
-    for (i = 0; i < m; ++i) {
-        for (j = 0; j < n; ++j) {
-            printf("%.4f ", x[i * n + j]);
-        }
-        printf("\n");
-    }
-}
+// inline static void print(int m, int n, const float *x) {
+//     int i, j;
+//     for (i = 0; i < m; ++i) {
+//         for (j = 0; j < n; ++j) {
+//             printf("%.4f ", x[i * n + j]);
+//         }
+//         printf("\n");
+//     }
+// }
 
-inline static void print_int(int m, int n, const int *x) {
-    int i, j;
-    for (i = 0; i < m; ++i) {
-        for (j = 0; j < n; ++j) {
-            printf("%d ", x[i * n + j]);
-        }
-        printf("\n");
-    }
-}
+// inline static void print_int(int m, int n, const int *x) {
+//     int i, j;
+//     for (i = 0; i < m; ++i) {
+//         for (j = 0; j < n; ++j) {
+//             printf("%d ", x[i * n + j]);
+//         }
+//         printf("\n");
+//     }
+// }
 
 inline static void fc(int m, int n, const float *x, const float *A, const float *b, float *y) {
     int i, j;
@@ -496,11 +439,6 @@ inline static void fc(int m, int n, const float *x, const float *A, const float 
 inline static void relu(int n, const float *x, float *y) {
 	rep(i, n) {
 		y[i] = (x[i] > 0.0) ? x[i] : 0.0;
-		// if (x[i] > 0) {
-		// 	y[i] = x[i];
-		// } else {
-		// 	y[i] = 0;
-		// }
 	}
 }
 
@@ -558,11 +496,6 @@ inline static void softmaxwithloss_bwd(int n, const float *y, unsigned char t, f
 inline static void relu_bwd(int n, const float *x, const float *dEdy, float *dEdx) {
 	rep(i, n) {
 		dEdx[i] = (x[i] > 0.0) ? dEdy[i] : 0.0;
-		// if (x[i] > 0.0) {
-		// 	dEdx[i] = dEdy[i];
-		// } else {
-		// 	dEdx[i] = 0.0;
-		// }
 	}
 }
 
@@ -739,8 +672,3 @@ inline static void load(const char *filename, int m, int n, float *A, float *b) 
 	fread(b, sizeof(float), n, fp);
 	fclose(fp);
 }
-
-//   // これ以降，３層NN の係数 A_784x10 および b_784x10 と，
-//   // 訓練データ train_x + 784*i (i=0,...,train_count-1), train_y[0]～train_y[train_count-1],
-//   // テストデータ test_x + 784*i (i=0,...,test_count-1), test_y[0]～test_y[test_count-1],
-//   // を使用することができる．
