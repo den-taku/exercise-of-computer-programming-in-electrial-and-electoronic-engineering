@@ -25,6 +25,7 @@ static void scale(int n, float x, float *o);
 static void init(int n, float x, float *o);
 static void rand_init(int n, float *o);
 static int inference6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, float *y);
+static void backward6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, unsigned char t, float *y, float *dEdA1, float *dEdb1, float *dEdA2, float *dEdb2, float *dEdA3, float *dEdb3);
 
 int main() {
     srand((unsigned int)time(NULL));
@@ -107,7 +108,115 @@ int main() {
 	free(y);
 	free(dEdA);
 	free(dEdb);
-	*/
+	*/ // NN3
+
+	// /* NN6
+	const int epoch = 10;
+	const int mini_batch = 100;
+	const float learning_rate = 0.1;
+
+	float *A1 = malloc(sizeof(float) * 50 * 784);
+	float *A2 = malloc(sizeof(float) * 100 * 50);
+	float *A3 = malloc(sizeof(float) * 10 * 100);
+	float *b1 = malloc(sizeof(float) * 50);
+	float *b2 = malloc(sizeof(float) * 100);
+	float *b3 = malloc(sizeof(float) * 10);
+	rand_init(50 * 784, A1);
+	rand_init(100 * 50, A2);
+	rand_init(10 * 100, A3);
+	rand_init(50, b1);
+	rand_init(100, b2);
+	rand_init(10, b3);
+
+	int *index = malloc(sizeof(int) * train_count);
+	rep(i, train_count) {
+		index[i] = i;
+	}
+
+	float *dEdA1_ave = malloc(sizeof(float) * 50 * 784);
+	float *dEdA2_ave = malloc(sizeof(float) * 100 * 50);
+	float *dEdA3_ave = malloc(sizeof(float) * 10 * 100);
+	float *dEdb1_ave = malloc(sizeof(float) * 50);
+	float *dEdb2_ave = malloc(sizeof(float) * 100);
+	float *dEdb3_ave = malloc(sizeof(float) * 10);
+	float *y = malloc(sizeof(float) * 10);
+	float *dEdA1 = malloc(sizeof(float) * 50 * 784);
+	float *dEdA2 = malloc(sizeof(float) * 100 * 50);
+	float *dEdA3 = malloc(sizeof(float) * 10 * 100);
+	float *dEdb1 = malloc(sizeof(float) * 50);
+	float *dEdb2 = malloc(sizeof(float) * 100);
+	float *dEdb3 = malloc(sizeof(float) * 10);
+
+	rep(i, epoch) {
+		// train
+		printf("epoch: %d\n", i + 1);
+		printf("	now training...\n");
+		shuffle(train_count, index);
+		rep(j, train_count / mini_batch) {
+			init(50 * 784, 0.0, dEdA1_ave);
+			init(100 * 50, 0.0, dEdA2_ave);
+			init(10 * 100, 0.0, dEdA3_ave);
+			init(50, 0.0, dEdb1_ave);
+			init(100, 0.0, dEdb2_ave);
+			init(10, 0.0, dEdb3_ave);
+			rep(k, mini_batch) {
+				backward6(A1, b1, A2, b2, A3, b3, train_x + 784 * index[j * mini_batch + k], train_y[index[j * mini_batch + k]], y, dEdA1, dEdb1, dEdA2, dEdb2, dEdA3, dEdb3);
+				add(50 * 784, dEdA1, dEdA1_ave);
+				add(100 * 50, dEdA2, dEdA2_ave);
+				add(10 * 100, dEdA3, dEdA3_ave);
+				add(50, dEdb1, dEdb1_ave);
+				add(100, dEdb2, dEdb2_ave);
+				add(10, dEdb3, dEdb3_ave);
+			}
+			const float coefficient = -1.0 * learning_rate / (float)mini_batch;
+			scale(50 * 784, coefficient, dEdA1_ave);
+			scale(100 * 50, coefficient, dEdA2_ave);
+			scale(10 * 100, coefficient, dEdA3_ave);
+			scale(50, coefficient, dEdb1_ave);
+			scale(100, coefficient, dEdb2_ave);
+			scale(10, coefficient, dEdb3_ave);
+			add(50 * 784, dEdA1_ave, A1);
+			add(100 * 50, dEdA2_ave, A2);
+			add(10 * 100, dEdA3_ave, A3);
+			add(50, dEdb1_ave, b1);
+			add(100, dEdb2_ave, b2);
+			add(10, dEdb3_ave, b3);
+		}
+		// test
+		printf("	now testing...\n");
+		int sum = 0;
+		float error = 0.0;
+		rep(i, test_count) {
+			if (inference6(A1, b1, A2, b2, A3, b3, test_x + i * width * height, y) == test_y[i]) {
+				++sum;
+			}
+			error += cross_entoropy_error(y, test_y[i]);
+		}
+		printf("		correct answer: %f%%\n", sum * 100.0 / test_count);
+		printf("		cross entropy : %f\n", error * 100.0 / test_count);
+	}
+
+	free(A1);
+	free(A2);
+	free(A3);
+	free(b1);
+	free(b2);
+	free(b3);
+	free(index);
+	free(dEdA1_ave);
+	free(dEdA2_ave);
+	free(dEdA3_ave);
+	free(dEdb1_ave);
+	free(dEdb2_ave);
+	free(dEdb3_ave);
+	free(dEdA1);
+	free(dEdA2);
+	free(dEdA3);
+	free(dEdb1);
+	free(dEdb2);
+	free(dEdb3);
+	free(y);
+	// */ // NN6
 
 
 	// float *y = malloc(sizeof(float) * 10);
@@ -116,15 +225,15 @@ int main() {
 	// printf("%d %d\n", ans, train_y[0]);
 	// free(y);
 
-	int sum = 0;
-	float *y = malloc(sizeof(float) * 10);
-	rep(i, test_count) {
-		if(inference6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, test_x + i * width * height, y) == test_y[i]) {
-			++sum;
-		}
-	}
-	free(y);
-	printf("%f%%\n", sum * 100.0 / test_count);
+	// int sum = 0;
+	// float *y = malloc(sizeof(float) * 10);
+	// rep(i, test_count) {
+	// 	if(inference6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, test_x + i * width * height, y) == test_y[i]) {
+	// 		++sum;
+	// 	}
+	// }
+	// free(y);
+	// printf("%f%%\n", sum * 100.0 / test_count);
 
 	// float *y = malloc(sizeof(float) * 10);
 	// float *dEdA = malloc(sizeof(float) * 784 * 10);
@@ -135,6 +244,25 @@ int main() {
 	// free(y);
 	// free(dEdA);
 	// free(dEdb);
+
+	// float *y = malloc(sizeof(float) * 10);
+	// float *dEdA1 = malloc(sizeof(float) * 50 * 784);
+	// float *dEdA2 = malloc(sizeof(float) * 100 * 50);
+	// float *dEdA3 = malloc(sizeof(float) * 10 * 100);
+	// float *dEdb1 = malloc(sizeof(float) * 50);
+	// float *dEdb2 = malloc(sizeof(float) * 100);
+	// float *dEdb3 = malloc(sizeof(float) * 10);
+	// backward6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, train_x + 784 * 8, train_y[8], y, dEdA1, dEdb1, dEdA2, dEdb2, dEdA3, dEdb3);
+	// // print(50, 784, dEdA1);
+	// // print(1, 50, dEdb1);
+	// print(1, 10, y);
+	// free(y);
+	// free(dEdA1);
+	// free(dEdA2);
+	// free(dEdA3);
+	// free(dEdb1);
+	// free(dEdb2);
+	// free(dEdb3);
 
 	// int *index = malloc(sizeof(int) * train_count);
 	// rep(i, train_count) {
@@ -227,13 +355,13 @@ inline static size_t max_index(int n, const float *data) {
 }
 
 inline static int inference3(const float *A, const float *b, const float *x, float *y) {
-	// float *y = malloc(sizeof(float) * 10);
+	float *y_tmp = malloc(sizeof(float) * 10);
 	// A: 10x784, b: 10, x: 784
-	fc(10, 784, x, A, b, y);
-	relu(10, y, y);
-	softmax(10, y, y);
+	fc(10, 784, x, A, b, y_tmp);
+	relu(10, y_tmp, y_tmp);
+	softmax(10, y_tmp, y);
 	int max = (int)max_index(10, y);
-	// free(y);
+	free(y_tmp);
 	return max;
 }
 
@@ -282,11 +410,11 @@ inline static void copy(int n, const float *x, float *y) {
 
 inline static void backward3(const float *A, const float *b, const float *x, unsigned char t, float *y, float *dEdA, float *dEdb) {
 	// A: 10x784, b: 10, x: 784
-	fc(10, 784, x, A, b, y);
 	float *relu_x = malloc(sizeof(float) * 10); 
-	copy(10, y, relu_x);
-	relu(10, y, y);
-	softmax(10, y, y);
+	float *y_tmp = malloc(sizeof(float) * 10);
+	fc(10, 784, x, A, b, relu_x);
+	relu(10, relu_x, y_tmp);
+	softmax(10, y_tmp, y);
 
 	float *dEdx_tmp = malloc(sizeof(float) * 10); 
 	softmaxwithloss_bwd(10, y, t, dEdx_tmp);
@@ -294,6 +422,7 @@ inline static void backward3(const float *A, const float *b, const float *x, uns
 	float *dEdx = malloc(sizeof(float) * 784);
 	fc_bwd(10, 784, x, dEdx_tmp, A, dEdA, dEdb, dEdx);
 	free(relu_x);
+	free(y_tmp);
 	free(dEdx_tmp);
 	free(dEdx);
 }
@@ -347,17 +476,61 @@ inline static int inference6(const float *A1, const float *b1, const float *A2, 
 	// A3: 10x100, b3: 10,
 	float *y1 = malloc(sizeof(float) * 50);
 	float *y2 = malloc(sizeof(float) * 100);
+	float *y3 = malloc(sizeof(float) * 10);
 	fc(50, 784, x, A1, b1, y1);
 	relu(50, y1, y1);
 	fc(100, 50, y1, A2, b2, y2);
 	relu(100, y2, y2);
-	fc(10, 100, y2, A3, b3, y);
-	softmax(10, y, y);
+	fc(10, 100, y2, A3, b3, y3);
+	softmax(10, y3, y);
 	int max = (int)max_index(10, y);
 	free(y1);
 	free(y2);
+	free(y3);
 	return max;
 }
+
+static void backward6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, unsigned char t, float *y, float *dEdA1, float *dEdb1, float *dEdA2, float *dEdb2, float *dEdA3, float *dEdb3) {
+	// A1: 50x784, b1: 50, x: 784
+	// A2: 100x50, b2: 100,
+	// A3: 10x100, b3: 10,
+
+	float *y1 = malloc(sizeof(float) * 50); // fc2's input
+	float *y2 = malloc(sizeof(float) * 100); // fc3's input
+	float *y3 = malloc(sizeof(float) * 10);
+	float *relu_x1 = malloc(sizeof(float) * 50); 
+	float *relu_x2 = malloc(sizeof(float) * 100); 
+	
+	fc(50, 784, x, A1, b1, relu_x1);
+	relu(50, relu_x1, y1);
+	fc(100, 50, y1, A2, b2, relu_x2);
+	relu(100, relu_x2, y2);
+	fc(10, 100, y2, A3, b3, y3);
+	softmax(10, y3, y);
+
+	float *dEdx_sm = malloc(sizeof(float) * 10);
+	float *dEdx_fc3 = malloc(sizeof(float) * 100);
+	float *dEdx_fc2 = malloc(sizeof(float) * 50);
+	float *dEdx = malloc(sizeof(float) * 784);
+
+	softmaxwithloss_bwd(10, y, t, dEdx_sm);
+	fc_bwd(10, 100, y2, dEdx_sm, A3, dEdA3, dEdb3, dEdx_fc3);
+	relu_bwd(100, relu_x2, dEdx_fc3, dEdx_fc3);
+	fc_bwd(100, 50, y1, dEdx_fc3, A2, dEdA2, dEdb2, dEdx_fc2);
+	relu_bwd(50, relu_x1, dEdx_fc2, dEdx_fc2);
+	fc_bwd(50, 784, x, dEdx_fc2, A1, dEdA1, dEdb1, dEdx);
+
+	free(y1);
+	free(y2);
+	free(y3);
+	free(relu_x1);
+	free(relu_x2);
+	free(dEdx_sm);
+	free(dEdx_fc3);
+	free(dEdx_fc2);
+	free(dEdx);
+}
+
 //   // これ以降，３層NN の係数 A_784x10 および b_784x10 と，
 //   // 訓練データ train_x + 784*i (i=0,...,train_count-1), train_y[0]～train_y[train_count-1],
 //   // テストデータ test_x + 784*i (i=0,...,test_count-1), test_y[0]～test_y[test_count-1],
