@@ -7,6 +7,8 @@ void fc(int m, int n, const float *x, const float *A, const float *b, float *y);
 void relu(int n, const float *x, float *y);
 float max(int n, const float *data);
 void softmax(int n, const float *x, float *y);
+size_t max_index(int n, const float *data);
+int interface3(const float *A, const float *b, const float *x);
 
 int main() {
 	float *train_x = NULL;
@@ -26,11 +28,10 @@ int main() {
 	  volatile float z = x/y;
 	#endif
 
-	float *y = malloc(sizeof(float) * 10);
-	fc(10, 784, train_x, A_784x10, b_784x10, y);
-	relu(10, y, y);
-	softmax(10, y, y);
-	print(1, 10, y);
+	int i = 1;
+	save_mnist_bmp(train_x + 784 * i, "train_%05d.bmp", i);
+	
+	// print(1, 10, y);
 
 	return 0;
 }
@@ -88,34 +89,29 @@ void softmax(int n, const float *x, float *y) {
 	}
 }
 
-// int main()
-// {
-//   float *train_x = NULL;
-//   unsigned char *train_y = NULL;
-//   int train_count = -1;
+size_t max_index(int n, const float *data) {
+    float max = data[0];
+	size_t max_index = 0;
+	rep(i, n) {
+		if (data[i] > max) {
+			max = data[i];
+			max_index = i;
+		}
+	}
+	return max_index;
+}
 
-//   float *test_x = NULL;
-//   unsigned char *test_y = NULL;
-//   int test_count = -1;
+int interface3(const float *A, const float *b, const float *x) {
+	float *y = malloc(sizeof(float) * 10);
+	// A: 10x784, b: 10, x: 784
+	fc(10, 784, x, A_784x10, b_784x10, y);
+	relu(10, y, y);
+	softmax(10, y, y);
+	return (int)max_index(10, y);
+}
 
-//   int width = -1;
-//   int height = -1;
-
-//   load_mnist(&train_x, &train_y, &train_count,
-//              &test_x, &test_y, &test_count,
-//              &width, &height);
-
-// /* 浮動小数点例外で停止することを確認するためのコード */
-// #if 0
-//   volatile float x = 0;
-//   volatile float y = 0;
-//   volatile float z = x/y;
-// #endif
 
 //   // これ以降，３層NN の係数 A_784x10 および b_784x10 と，
 //   // 訓練データ train_x + 784*i (i=0,...,train_count-1), train_y[0]～train_y[train_count-1],
 //   // テストデータ test_x + 784*i (i=0,...,test_count-1), test_y[0]～test_y[test_count-1],
 //   // を使用することができる．
-
-//   return 0;
-// }
