@@ -9,6 +9,11 @@ float max(int n, const float *data);
 void softmax(int n, const float *x, float *y);
 size_t max_index(int n, const float *data);
 int interface3(const float *A, const float *b, const float *x);
+void softmaxwithloss_bwd(int n, const float *y, unsigned char t, float *dEdx);
+void relu_bwd(int n, const float *x, const float *dEdy, float *dEdx);
+void fc_bwd(int m, int n, const float *x, const float *dEdy, const float *A, float *dEdA, float *dEdb, float *dEdx);
+void copy(int n, const float *x, float *y);
+void backward3(const float *A, const float *b, const float *x, unsigned char t, float *y, float *dEdA, float *dEdb);
 
 int main() {
 	float *train_x = NULL;
@@ -28,9 +33,21 @@ int main() {
 	  volatile float z = x/y;
 	#endif
 
-	int i = 1;
-	save_mnist_bmp(train_x + 784 * i, "train_%05d.bmp", i);
-	
+	// int sum = 0;
+	// rep(i, test_count) {
+	// 	if(interface3(A_784x10, b_784x10, test_x + i * width * height) == test_y[i]) {
+	// 		++sum;
+	// 	}
+	// }
+	// printf("%f%%\n", sum * 100.0 / test_count);
+
+	float *y = malloc(sizeof(float) * 10);
+	float *dEdA = malloc(sizeof(float) * 784 * 10);
+	float *dEdb = malloc(sizeof(float) * 10);
+	backward3(A_784x10, b_784x10, train_x + 784 * 8, train_y[8], y, dEdA, dEdb);
+	print(10, 784, dEdA);
+	print(1, 10, dEdb);
+
 	// print(1, 10, y);
 
 	return 0;
@@ -104,12 +121,69 @@ size_t max_index(int n, const float *data) {
 int interface3(const float *A, const float *b, const float *x) {
 	float *y = malloc(sizeof(float) * 10);
 	// A: 10x784, b: 10, x: 784
-	fc(10, 784, x, A_784x10, b_784x10, y);
+	fc(10, 784, x, A, b, y);
 	relu(10, y, y);
 	softmax(10, y, y);
 	return (int)max_index(10, y);
 }
 
+// no tests
+void softmaxwithloss_bwd(int n, const float *y, unsigned char t, float *dEdx) {
+	float *y_k = malloc(sizeof(float) * n);
+	softmax(n, y, y_k);
+	rep(i, n) {
+		dEdx[i] = y_k[i] - t;
+	}
+}
+
+// no tests
+void relu_bwd(int n, const float *x, const float *dEdy, float *dEdx) {
+	rep(i, x) {
+		if (x[i] > 0.0) {
+			dEdx[i] = dEdy[i];
+		} else {
+			dEdx[i] = 0.0;
+		}
+	}
+}
+
+// no tests
+void fc_bwd(int m, int n, const float *x, const float *dEdy, const float *A, float *dEdA, float *dEdb, float *dEdx){
+	rep(i, m) {
+		rep(j, n) {
+			dEdA[i * n + j] = dEdy[i] * x[j];
+
+		}
+		dEdb[i] = dEdy[i];
+	}
+	rep(i, n) {
+		dEdx[i] = 0.0;
+		rep(j, m) {
+			dEdx[i] += A[j * n + i] * dEdy[j];
+		}
+    }
+	
+}
+
+void copy(int n, const float *x, float *y) {
+	rep(i, n) {
+		y[i] = x[i];
+	}
+}
+
+// TODO: here
+void backward3(const float *A, const float *b, const float *x, unsigned char t, float *y, float *dEdA, float *dEdb) {
+	// float *y = malloc(sizeof(float) * 10);
+	// A: 10x784, b: 10, x: 784
+	fc(10, 784, x, A, b, y);
+	float *tmp_y = malloc(sizeof(float) * 10);
+	copy(10, y, tmp_y);
+	float *tmp_x = malloc(sizeof(float) * 784);
+	copy(784, y, tmp_x);
+	relu(10, y, y);
+	softmax(10, y, y);
+	// return (int)max_index(10, y);
+}
 
 //   // これ以降，３層NN の係数 A_784x10 および b_784x10 と，
 //   // 訓練データ train_x + 784*i (i=0,...,train_count-1), train_y[0]～train_y[train_count-1],
