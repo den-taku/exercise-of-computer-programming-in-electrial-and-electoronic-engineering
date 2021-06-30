@@ -1,0 +1,8 @@
+/kadai
+*.txt
+*.png
+nn.h
+nn_hiragana.h
+t10k*
+train*
+hiragana*
