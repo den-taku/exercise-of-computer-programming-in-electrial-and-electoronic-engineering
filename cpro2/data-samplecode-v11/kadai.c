@@ -5,6 +5,7 @@
 #include <time.h>
 
 static void print(int m, int n, const float *x);
+static void print_int(int m, int n, const int *x);
 static void fc(int m, int n, const float *x, const float *A, const float *b, float *y);
 static void relu(int n, const float *x, float *y);
 static float max(int n, const float *data);
@@ -25,6 +26,7 @@ static void init(int n, float x, float *o);
 static void rand_init(int n, float *o);
 
 int main() {
+    srand((unsigned int)time(NULL));
 	float *train_x = NULL;
 	unsigned char *train_y = NULL;
 	int train_count = -1;
@@ -46,9 +48,9 @@ int main() {
 	const int mini_batch = 100;
 	const float learning_rate = 0.1;
 
-	float *A = malloc(sizeof(float) * 784 * 10);
+	float *A = malloc(sizeof(float) * 10 * 784);
 	float *b = malloc(sizeof(float) * 10);
-	rand_init(784 * 10, A);
+	rand_init(10 * 784, A);
 	rand_init(10, b);
 
 	int *index = malloc(sizeof(int) * train_count);
@@ -56,7 +58,7 @@ int main() {
 		index[i] = i;
 	}
 
-	float *dEdA_ave = malloc(sizeof(float) * 784 * 10);
+	float *dEdA_ave = malloc(sizeof(float) * 10 * 784);
 	float *dEdb_ave = malloc(sizeof(float) * 10);
 	float *y = malloc(sizeof(float) * 10);
 	float *dEdA = malloc(sizeof(float) * 784 * 10);
@@ -64,25 +66,25 @@ int main() {
 
 	rep(i, epoch) {
 		// train
-		printf("epoch: %d\n", i);
-		printf("	training...\n");
+		printf("epoch: %d\n", i + 1);
+		printf("	now training...\n");
 		shuffle(train_count, index);
 		rep(j, train_count / mini_batch) {
-			init(784 * 10, 0.0, dEdA_ave);
+			init(10 * 784, 0.0, dEdA_ave);
 			init(10, 0.0, dEdb_ave);
 			rep(k, mini_batch) {
 				backward3(A, b, train_x + 784 * index[j * mini_batch + k], train_y[index[j * mini_batch + k]], y, dEdA, dEdb);
-				add(784 * 10, dEdA, dEdA_ave);
+				add(10 * 784, dEdA, dEdA_ave);
 				add(10, dEdb, dEdb_ave);
 			}
-			const float coefficient = (train_count / mini_batch) * learning_rate * (-1.0);
+			const float coefficient = -1.0 * learning_rate / (float)mini_batch;
 			scale(784 * 10, coefficient, dEdA_ave);
 			scale(10, coefficient, dEdb_ave);
 			add(784 * 10, dEdA_ave, A);
 			add(10, dEdb_ave, b);
 		}
 		// test
-		printf("	testing..\n");
+		printf("	now testing...\n");
 		int sum = 0;
 		float error = 0.0;
 		rep(i, test_count) {
@@ -103,6 +105,13 @@ int main() {
 	free(y);
 	free(dEdA);
 	free(dEdb);
+
+
+	// float *y = malloc(sizeof(float) * 10);
+	// int ans = inference3(A_784x10, b_784x10, train_x, y);
+	// print(1, 10, y);
+	// printf("%d %d\n", ans, train_y[0]);
+	// free(y);
 
 	// int sum = 0;
 	// float *y = malloc(sizeof(float) * 10);
@@ -128,7 +137,9 @@ int main() {
 	// rep(i, train_count) {
 	// 	index[i] = i;
 	// }
+	// print_int(1, 100, index);
 	// shuffle(train_count, index);
+	// print_int(1, 100, index);
 	// free(index);
 
 	// print(1, 10, y);
@@ -141,6 +152,16 @@ inline static void print(int m, int n, const float *x) {
     for (i = 0; i < m; ++i) {
         for (j = 0; j < n; ++j) {
             printf("%.4f ", x[i * n + j]);
+        }
+        printf("\n");
+    }
+}
+
+inline static void print_int(int m, int n, const int *x) {
+    int i, j;
+    for (i = 0; i < m; ++i) {
+        for (j = 0; j < n; ++j) {
+            printf("%d ", x[i * n + j]);
         }
         printf("\n");
     }
@@ -259,18 +280,17 @@ inline static void copy(int n, const float *x, float *y) {
 inline static void backward3(const float *A, const float *b, const float *x, unsigned char t, float *y, float *dEdA, float *dEdb) {
 	// A: 10x784, b: 10, x: 784
 	fc(10, 784, x, A, b, y);
-	float *tmp_x = malloc(sizeof(float) * 784); // TODO : Check
-	copy(784, y, tmp_x);
+	float *relu_x = malloc(sizeof(float) * 10); 
+	copy(10, y, relu_x);
 	relu(10, y, y);
 	softmax(10, y, y);
-	// return (int)max_index(10, y);
 
-	float *dEdx_tmp = malloc(sizeof(float) * 784); // TODO : Check
+	float *dEdx_tmp = malloc(sizeof(float) * 10); 
 	softmaxwithloss_bwd(10, y, t, dEdx_tmp);
-	relu_bwd(10, tmp_x, dEdx_tmp, dEdx_tmp);
+	relu_bwd(10, relu_x, dEdx_tmp, dEdx_tmp);
 	float *dEdx = malloc(sizeof(float) * 784);
 	fc_bwd(10, 784, x, dEdx_tmp, A, dEdA, dEdb, dEdx);
-	free(tmp_x);
+	free(relu_x);
 	free(dEdx_tmp);
 	free(dEdx);
 }
@@ -283,7 +303,6 @@ inline static void swap_int(int *x, int *y) {
 
 // no tests
 inline static void shuffle(int n, int *x) {
-    srand((unsigned int)time(NULL));
 	rep(i, n) {
 		int j = (int)rand() % n;
 		swap_int(&x[i], &x[j]);
@@ -296,33 +315,27 @@ inline static float cross_entoropy_error(const float *y, int t) {
 }
 
 inline static void add(int n, const float *x, float *o) {
-    int i;
-    for (i = 0; i < n; ++i) {
-        o[i] += x[i];
-    }
+	rep(i, n) {
+		o[i] += x[i];
+	}
 }
 
 inline static void scale(int n, float x, float *o) {
-    int i;
-    for (i = 0; i < n; ++i) {
-        o[i] *= x;
-    }
+	rep(i, n) {
+		o[i] *= x;
+	}
 }
 
 inline static void init(int n, float x, float *o) {
-    int i;
-    for (i = 0; i < n; ++i) {
-        o[i] = x;
-    }
+	rep(i, n) {
+		o[i] = x;
+	}
 }
 
 inline static void rand_init(int n, float *o) {
-    int i;
-    srand((unsigned int)time(NULL));
-    for (i = 0; i < n; ++i)
-    {
-        o[i] = (float)rand() / RAND_MAX * 2.0 - 1.0;
-    }
+	rep(i, n) {
+		o[i] = (float)rand() / RAND_MAX * 2.0 - 1.0;
+	}
 }
 
 //   // これ以降，３層NN の係数 A_784x10 および b_784x10 と，
