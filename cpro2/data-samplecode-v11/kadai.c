@@ -26,8 +26,10 @@ static void init(int n, float x, float *o);
 static void rand_init(int n, float *o);
 static int inference6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, float *y);
 static void backward6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, unsigned char t, float *y, float *dEdA1, float *dEdb1, float *dEdA2, float *dEdb2, float *dEdA3, float *dEdb3);
+static void save(const char *filename, int m, int n, const float *A, const float *b);
+static void load(const char *filename, int m, int n, float *A, float *b);
 
-int main() {
+int main(int argc, char *argv[]) {
     srand((unsigned int)time(NULL));
 	float *train_x = NULL;
 	unsigned char *train_y = NULL;
@@ -46,179 +48,362 @@ int main() {
 	  volatile float z = x/y;
 	#endif
 
-	/* NN3
 	const int epoch = 10;
 	const int mini_batch = 100;
 	const float learning_rate = 0.1;
+	const float coefficient = -1.0 * learning_rate / (float)mini_batch;
 
-	float *A = malloc(sizeof(float) * 10 * 784);
-	float *b = malloc(sizeof(float) * 10);
-	rand_init(10 * 784, A);
-	rand_init(10, b);
+	int *index = NULL;
+	float *y = NULL;
+	float *x = NULL;
 
-	int *index = malloc(sizeof(int) * train_count);
-	rep(i, train_count) {
-		index[i] = i;
-	}
+	int sum;
+	float error;
 
-	float *dEdA_ave = malloc(sizeof(float) * 10 * 784);
-	float *dEdb_ave = malloc(sizeof(float) * 10);
-	float *y = malloc(sizeof(float) * 10);
-	float *dEdA = malloc(sizeof(float) * 784 * 10);
-	float *dEdb = malloc(sizeof(float) * 10);
+	int input;
+	char filename[256];
 
-	rep(i, epoch) {
-		// train
-		printf("epoch: %d\n", i + 1);
-		printf("	now training...\n");
-		shuffle(train_count, index);
-		rep(j, train_count / mini_batch) {
-			init(10 * 784, 0.0, dEdA_ave);
-			init(10, 0.0, dEdb_ave);
-			rep(k, mini_batch) {
-				backward3(A, b, train_x + 784 * index[j * mini_batch + k], train_y[index[j * mini_batch + k]], y, dEdA, dEdb);
-				add(10 * 784, dEdA, dEdA_ave);
-				add(10, dEdb, dEdb_ave);
-			}
-			const float coefficient = -1.0 * learning_rate / (float)mini_batch;
-			scale(784 * 10, coefficient, dEdA_ave);
-			scale(10, coefficient, dEdb_ave);
-			add(784 * 10, dEdA_ave, A);
-			add(10, dEdb_ave, b);
+	float *A = NULL;
+	float *b = NULL;
+	float *dEdA_ave = NULL;
+	float *dEdb_ave = NULL;
+	float *dEdA = NULL;
+	float *dEdb = NULL;
+
+	float *A1 = NULL;
+	float *A2 = NULL;
+	float *A3 = NULL;
+	float *b1 = NULL;
+	float *b2 = NULL;
+	float *b3 = NULL;
+	float *dEdA1_ave = NULL;
+	float *dEdA2_ave = NULL;
+	float *dEdA3_ave = NULL;
+	float *dEdb1_ave = NULL;
+	float *dEdb2_ave = NULL;
+	float *dEdb3_ave = NULL;
+	float *dEdA1 = NULL;
+	float *dEdA2 = NULL;
+	float *dEdA3 = NULL;
+	float *dEdb1 = NULL;
+	float *dEdb2 = NULL;
+	float *dEdb3 = NULL;
+
+
+	int select;
+	printf("NN inference for charactures.\n");
+	printf("3 layer: \n");
+	printf("	learning:       type 1\n");
+	printf("	correct rate:   type 2\n");
+	printf("	infer bmp file: type 3\n");
+	printf("6 layer: \n");
+	printf("	learning:       type 4\n");
+	printf("	correct rate:   type 5\n");
+	printf("	infer bmp file: type 6\n");
+	printf("Quit: \n");
+	printf("	type another");
+	printf(" > ");
+	scanf("%d", &select);
+
+	switch (select) {
+	case 1:
+		A = malloc(sizeof(float) * 10 * 784);
+		b = malloc(sizeof(float) * 10);
+		rand_init(10 * 784, A);
+		rand_init(10, b);
+
+		index = malloc(sizeof(int) * train_count);
+		rep(i, train_count) {
+			index[i] = i;
 		}
-		// test
-		printf("	now testing...\n");
-		int sum = 0;
-		float error = 0.0;
+
+		dEdA_ave = malloc(sizeof(float) * 10 * 784);
+		dEdb_ave = malloc(sizeof(float) * 10);
+		y = malloc(sizeof(float) * 10);
+		dEdA = malloc(sizeof(float) * 784 * 10);
+		dEdb = malloc(sizeof(float) * 10);
+
+		rep(i, epoch) {
+			// train
+			printf("epoch: %d\n", i + 1);
+			printf("	now training...\n");
+			shuffle(train_count, index);
+			rep(j, train_count / mini_batch) {
+				init(10 * 784, 0.0, dEdA_ave);
+				init(10, 0.0, dEdb_ave);
+				rep(k, mini_batch) {
+					backward3(A, b, train_x + 784 * index[j * mini_batch + k], train_y[index[j * mini_batch + k]], y, dEdA, dEdb);
+					add(10 * 784, dEdA, dEdA_ave);
+					add(10, dEdb, dEdb_ave);
+				}
+				scale(784 * 10, coefficient, dEdA_ave);
+				scale(10, coefficient, dEdb_ave);
+				add(784 * 10, dEdA_ave, A);
+				add(10, dEdb_ave, b);
+			}
+			// test
+			printf("	now testing...\n");
+			sum = 0;
+			error = 0.0;
+			rep(i, test_count) {
+				if (inference3(A, b, test_x + i * width * height, y) == test_y[i]) {
+					++sum;
+				}
+				error += cross_entoropy_error(y, test_y[i]);
+			}
+			printf("		correct answer: %f%%\n", sum * 100.0 / test_count);
+			printf("		cross entropy : %f\n", error * 100.0 / test_count);
+		}
+		printf("Save?(1/0) > ");
+		scanf("%d", &input);
+		switch (input) {
+		case 1:
+			printf("Filename > ");
+			scanf("%s", filename);
+			save(filename, 10, 784, A, b);
+			break;
+		case 0:
+		default:
+			printf("End learning...");
+			break;
+		}
+		free(A);
+		free(b);
+		free(index);
+		free(dEdA_ave);
+		free(dEdb_ave);
+		free(y);
+		free(dEdA);
+		free(dEdb);
+		break;
+
+	case 2:
+		printf("Filename  > ");
+		scanf("%s", filename);
+		A = malloc(sizeof(float) * 10 * 784);
+		b = malloc(sizeof(float) * 10);
+		load(filename, 10, 784, A, b);
+		sum = 0;
+		y = malloc(sizeof(float) * 10);
 		rep(i, test_count) {
 			if (inference3(A, b, test_x + i * width * height, y) == test_y[i]) {
 				++sum;
 			}
-			error += cross_entoropy_error(y, test_y[i]);
 		}
-		printf("		correct answer: %f%%\n", sum * 100.0 / test_count);
-		printf("		cross entropy : %f\n", error * 100.0 / test_count);
-	}
+		free(y);
+		printf("%f%%\n", sum * 100.0 / test_count);
+		free(A);
+		free(b);
+		break;
 
-	free(A);
-	free(b);
-	free(index);
-	free(dEdA_ave);
-	free(dEdb_ave);
-	free(y);
-	free(dEdA);
-	free(dEdb);
-	*/ // NN3
+	case 3:
+		printf("parameters' filename  > ");
+		scanf("%s", filename);
+		A = malloc(sizeof(float) * 10 * 784);
+		b = malloc(sizeof(float) * 10);
+		y = malloc(sizeof(float) * 10);
+		load(filename, 10, 784, A, b);
+		printf("bmpfile name  > ");
+		scanf("%s", filename);
+		x = load_mnist_bmp(filename);
+		printf("%d\n", inference3(A, b, x, y));
+		free(A);
+		free(b);
+		free(y);
+		free(x);
+		break;
 
-	// /* NN6
-	const int epoch = 10;
-	const int mini_batch = 100;
-	const float learning_rate = 0.1;
+	case 4:
+		A1 = malloc(sizeof(float) * 50 * 784);
+		A2 = malloc(sizeof(float) * 100 * 50);
+		A3 = malloc(sizeof(float) * 10 * 100);
+		b1 = malloc(sizeof(float) * 50);
+		b2 = malloc(sizeof(float) * 100);
+		b3 = malloc(sizeof(float) * 10);
+		rand_init(50 * 784, A1);
+		rand_init(100 * 50, A2);
+		rand_init(10 * 100, A3);
+		rand_init(50, b1);
+		rand_init(100, b2);
+		rand_init(10, b3);
 
-	float *A1 = malloc(sizeof(float) * 50 * 784);
-	float *A2 = malloc(sizeof(float) * 100 * 50);
-	float *A3 = malloc(sizeof(float) * 10 * 100);
-	float *b1 = malloc(sizeof(float) * 50);
-	float *b2 = malloc(sizeof(float) * 100);
-	float *b3 = malloc(sizeof(float) * 10);
-	rand_init(50 * 784, A1);
-	rand_init(100 * 50, A2);
-	rand_init(10 * 100, A3);
-	rand_init(50, b1);
-	rand_init(100, b2);
-	rand_init(10, b3);
+		index = malloc(sizeof(int) * train_count);
+		rep(i, train_count) {
+			index[i] = i;
+		}
 
-	int *index = malloc(sizeof(int) * train_count);
-	rep(i, train_count) {
-		index[i] = i;
-	}
+		dEdA1_ave = malloc(sizeof(float) * 50 * 784);
+		dEdA2_ave = malloc(sizeof(float) * 100 * 50);
+		dEdA3_ave = malloc(sizeof(float) * 10 * 100);
+		dEdb1_ave = malloc(sizeof(float) * 50);
+		dEdb2_ave = malloc(sizeof(float) * 100);
+		dEdb3_ave = malloc(sizeof(float) * 10);
+		y = malloc(sizeof(float) * 10);
+		dEdA1 = malloc(sizeof(float) * 50 * 784);
+		dEdA2 = malloc(sizeof(float) * 100 * 50);
+		dEdA3 = malloc(sizeof(float) * 10 * 100);
+		dEdb1 = malloc(sizeof(float) * 50);
+		dEdb2 = malloc(sizeof(float) * 100);
+		dEdb3 = malloc(sizeof(float) * 10);
 
-	float *dEdA1_ave = malloc(sizeof(float) * 50 * 784);
-	float *dEdA2_ave = malloc(sizeof(float) * 100 * 50);
-	float *dEdA3_ave = malloc(sizeof(float) * 10 * 100);
-	float *dEdb1_ave = malloc(sizeof(float) * 50);
-	float *dEdb2_ave = malloc(sizeof(float) * 100);
-	float *dEdb3_ave = malloc(sizeof(float) * 10);
-	float *y = malloc(sizeof(float) * 10);
-	float *dEdA1 = malloc(sizeof(float) * 50 * 784);
-	float *dEdA2 = malloc(sizeof(float) * 100 * 50);
-	float *dEdA3 = malloc(sizeof(float) * 10 * 100);
-	float *dEdb1 = malloc(sizeof(float) * 50);
-	float *dEdb2 = malloc(sizeof(float) * 100);
-	float *dEdb3 = malloc(sizeof(float) * 10);
-
-	rep(i, epoch) {
-		// train
-		printf("epoch: %d\n", i + 1);
-		printf("	now training...\n");
-		shuffle(train_count, index);
-		rep(j, train_count / mini_batch) {
-			init(50 * 784, 0.0, dEdA1_ave);
-			init(100 * 50, 0.0, dEdA2_ave);
-			init(10 * 100, 0.0, dEdA3_ave);
-			init(50, 0.0, dEdb1_ave);
-			init(100, 0.0, dEdb2_ave);
-			init(10, 0.0, dEdb3_ave);
-			rep(k, mini_batch) {
-				backward6(A1, b1, A2, b2, A3, b3, train_x + 784 * index[j * mini_batch + k], train_y[index[j * mini_batch + k]], y, dEdA1, dEdb1, dEdA2, dEdb2, dEdA3, dEdb3);
-				add(50 * 784, dEdA1, dEdA1_ave);
-				add(100 * 50, dEdA2, dEdA2_ave);
-				add(10 * 100, dEdA3, dEdA3_ave);
-				add(50, dEdb1, dEdb1_ave);
-				add(100, dEdb2, dEdb2_ave);
-				add(10, dEdb3, dEdb3_ave);
+		rep(i, epoch) {
+			// train
+			printf("epoch: %d\n", i + 1);
+			printf("	now training...\n");
+			shuffle(train_count, index);
+			rep(j, train_count / mini_batch) {
+				init(50 * 784, 0.0, dEdA1_ave);
+				init(100 * 50, 0.0, dEdA2_ave);
+				init(10 * 100, 0.0, dEdA3_ave);
+				init(50, 0.0, dEdb1_ave);
+				init(100, 0.0, dEdb2_ave);
+				init(10, 0.0, dEdb3_ave);
+				rep(k, mini_batch) {
+					backward6(A1, b1, A2, b2, A3, b3, train_x + 784 * index[j * mini_batch + k], train_y[index[j * mini_batch + k]], y, dEdA1, dEdb1, dEdA2, dEdb2, dEdA3, dEdb3);
+					add(50 * 784, dEdA1, dEdA1_ave);
+					add(100 * 50, dEdA2, dEdA2_ave);
+					add(10 * 100, dEdA3, dEdA3_ave);
+					add(50, dEdb1, dEdb1_ave);
+					add(100, dEdb2, dEdb2_ave);
+					add(10, dEdb3, dEdb3_ave);
+				}
+				scale(50 * 784, coefficient, dEdA1_ave);
+				scale(100 * 50, coefficient, dEdA2_ave);
+				scale(10 * 100, coefficient, dEdA3_ave);
+				scale(50, coefficient, dEdb1_ave);
+				scale(100, coefficient, dEdb2_ave);
+				scale(10, coefficient, dEdb3_ave);
+				add(50 * 784, dEdA1_ave, A1);
+				add(100 * 50, dEdA2_ave, A2);
+				add(10 * 100, dEdA3_ave, A3);
+				add(50, dEdb1_ave, b1);
+				add(100, dEdb2_ave, b2);
+				add(10, dEdb3_ave, b3);
 			}
-			const float coefficient = -1.0 * learning_rate / (float)mini_batch;
-			scale(50 * 784, coefficient, dEdA1_ave);
-			scale(100 * 50, coefficient, dEdA2_ave);
-			scale(10 * 100, coefficient, dEdA3_ave);
-			scale(50, coefficient, dEdb1_ave);
-			scale(100, coefficient, dEdb2_ave);
-			scale(10, coefficient, dEdb3_ave);
-			add(50 * 784, dEdA1_ave, A1);
-			add(100 * 50, dEdA2_ave, A2);
-			add(10 * 100, dEdA3_ave, A3);
-			add(50, dEdb1_ave, b1);
-			add(100, dEdb2_ave, b2);
-			add(10, dEdb3_ave, b3);
+			// test
+			printf("	now testing...\n");
+			sum = 0;
+			error = 0.0;
+			rep(i, test_count) {
+				if (inference6(A1, b1, A2, b2, A3, b3, test_x + i * width * height, y) == test_y[i]) {
+					++sum;
+				}
+				error += cross_entoropy_error(y, test_y[i]);
+			}
+			printf("		correct answer: %f%%\n", sum * 100.0 / test_count);
+			printf("		cross entropy : %f\n", error * 100.0 / test_count);
 		}
-		// test
-		printf("	now testing...\n");
-		int sum = 0;
-		float error = 0.0;
+
+		printf("Save?(1/0) > ");
+		scanf("%d", &input);
+		switch (input) {
+		case 1:
+			printf("Filename1 > ");
+			scanf("%s", filename);
+			save(filename, 50, 784, A1, b1);
+			printf("Filename2 > ");
+			scanf("%s", filename);
+			save(filename, 100, 50, A2, b2);
+			printf("Filename3 > ");
+			scanf("%s", filename);
+			save(filename, 10, 100, A3, b3);
+			break;
+		case 0:
+		default:
+			printf("End learning...");
+			break;
+		}
+
+		free(A1);
+		free(A2);
+		free(A3);
+		free(b1);
+		free(b2);
+		free(b3);
+		free(index);
+		free(dEdA1_ave);
+		free(dEdA2_ave);
+		free(dEdA3_ave);
+		free(dEdb1_ave);
+		free(dEdb2_ave);
+		free(dEdb3_ave);
+		free(dEdA1);
+		free(dEdA2);
+		free(dEdA3);
+		free(dEdb1);
+		free(dEdb2);
+		free(dEdb3);
+		free(y);
+		break;
+
+	case 5:
+		A1 = malloc(sizeof(float) * 50 * 784);
+		A2 = malloc(sizeof(float) * 100 * 50);
+		A3 = malloc(sizeof(float) * 10 * 100);
+		b1 = malloc(sizeof(float) * 50);
+		b2 = malloc(sizeof(float) * 100);
+		b3 = malloc(sizeof(float) * 10);
+		printf("Filename1  > ");
+		scanf("%s", filename);
+		load(filename, 50, 784, A1, b1);
+		printf("Filename2  > ");
+		scanf("%s", filename);
+		load(filename, 50, 784, A2, b2);
+		printf("Filename3  > ");
+		scanf("%s", filename);
+		load(filename, 50, 784, A3, b3);
+		sum = 0;
+		y = malloc(sizeof(float) * 10);
 		rep(i, test_count) {
 			if (inference6(A1, b1, A2, b2, A3, b3, test_x + i * width * height, y) == test_y[i]) {
 				++sum;
 			}
-			error += cross_entoropy_error(y, test_y[i]);
 		}
-		printf("		correct answer: %f%%\n", sum * 100.0 / test_count);
-		printf("		cross entropy : %f\n", error * 100.0 / test_count);
+		free(y);
+		printf("%f%%\n", sum * 100.0 / test_count);
+		free(A1);
+		free(A2);
+		free(A3);
+		free(b1);
+		free(b2);
+		free(b3);
+		break;
+
+	case 6:
+		A1 = malloc(sizeof(float) * 50 * 784);
+		A2 = malloc(sizeof(float) * 100 * 50);
+		A3 = malloc(sizeof(float) * 10 * 100);
+		b1 = malloc(sizeof(float) * 50);
+		b2 = malloc(sizeof(float) * 100);
+		b3 = malloc(sizeof(float) * 10);
+		y = malloc(sizeof(float) * 10);
+		printf("parameters' filename1 > ");
+		scanf("%s", filename);
+		load(filename, 50, 784, A1, b1);
+		printf("parameters' filename2 > ");
+		scanf("%s", filename);
+		load(filename, 50, 784, A2, b2);
+		printf("parameters' filename3 > ");
+		scanf("%s", filename);
+		load(filename, 50, 784, A3, b3);
+		printf("bmp file name > ");
+		scanf("%s", filename);
+		x = load_mnist_bmp(filename);
+		printf("%d\n", inference6(A1, b1, A2, b2, A3, b3, x, y));
+		free(A1);
+		free(A2);
+		free(A3);
+		free(b1);
+		free(b2);
+		free(b3);
+		free(y);
+		free(x);
+		break;
+
+	default:
+		break;
 	}
-
-	free(A1);
-	free(A2);
-	free(A3);
-	free(b1);
-	free(b2);
-	free(b3);
-	free(index);
-	free(dEdA1_ave);
-	free(dEdA2_ave);
-	free(dEdA3_ave);
-	free(dEdb1_ave);
-	free(dEdb2_ave);
-	free(dEdb3_ave);
-	free(dEdA1);
-	free(dEdA2);
-	free(dEdA3);
-	free(dEdb1);
-	free(dEdb2);
-	free(dEdb3);
-	free(y);
-	// */ // NN6
-
-
+	
 	// float *y = malloc(sizeof(float) * 10);
 	// int ans = inference6(A1_784_50_100_10, b1_784_50_100_10, A2_784_50_100_10, b2_784_50_100_10, A3_784_50_100_10, b3_784_50_100_10, train_x, y);
 	// print(1, 10, y);
@@ -490,7 +675,7 @@ inline static int inference6(const float *A1, const float *b1, const float *A2, 
 	return max;
 }
 
-static void backward6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, unsigned char t, float *y, float *dEdA1, float *dEdb1, float *dEdA2, float *dEdb2, float *dEdA3, float *dEdb3) {
+inline static void backward6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, unsigned char t, float *y, float *dEdA1, float *dEdb1, float *dEdA2, float *dEdb2, float *dEdA3, float *dEdb3) {
 	// A1: 50x784, b1: 50, x: 784
 	// A2: 100x50, b2: 100,
 	// A3: 10x100, b3: 10,
@@ -529,6 +714,30 @@ static void backward6(const float *A1, const float *b1, const float *A2, const f
 	free(dEdx_fc3);
 	free(dEdx_fc2);
 	free(dEdx);
+}
+
+inline static void save(const char *filename, int m, int n, const float *A, const float *b) {
+	FILE *fp;
+	fp = fopen(filename, "wr");
+	if (!fp) {
+		printf("%s cannot open", filename);
+		return;
+	}
+	fwrite(A, sizeof(float), m * n, fp);
+	fwrite(b, sizeof(float), n, fp);
+	fclose(fp);
+}
+
+inline static void load(const char *filename, int m, int n, float *A, float *b) {
+	FILE *fp;
+	fp = fopen(filename, "rb");
+	if (!fp) {
+		printf("%s cannot open", filename);
+		return;
+	}
+	fread(A, sizeof(float), m * n, fp);
+	fread(b, sizeof(float), n, fp);
+	fclose(fp);
 }
 
 //   // これ以降，３層NN の係数 A_784x10 および b_784x10 と，
