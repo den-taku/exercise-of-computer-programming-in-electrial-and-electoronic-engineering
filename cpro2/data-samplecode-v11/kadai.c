@@ -425,7 +425,10 @@ int main(int argc, char *argv[]) {
 //     }
 // }
 
-// calculate y = Ax + b, A: m x n matrix.
+// calculate y = Ax + b
+// A: M(m, n, ℝ) matrix
+// x: ℝ^n vector
+// b, y: ℝ^m vector
 inline static void fc(int m, int n, const float *x, const float *A, const float *b, float *y) {
     int i, j;
     for (i = 0; i < m; ++i) {
@@ -437,6 +440,8 @@ inline static void fc(int m, int n, const float *x, const float *A, const float 
 }
 
 // relu: _/
+// x -> y
+// x, y: ℝ^n vector
 inline static void relu(int n, const float *x, float *y) {
     rep(i, n) {
         y[i] = (x[i] > 0.0) ? x[i] : 0.0;
@@ -444,6 +449,7 @@ inline static void relu(int n, const float *x, float *y) {
 }
 
 // find max element from data.
+// data: ℝ^n vector
 inline static float max(int n, const float *data) {
     float max = data[0];
 	rep(i, n) {
@@ -455,6 +461,7 @@ inline static float max(int n, const float *data) {
 }
 
 // softmax: y_k = exp(x_k) / Σi exp(x_i)
+// x, y: ℝ^n vector
 inline static void softmax(int n, const float *x, float *y) {
     float mx = max(n, x); // Θ(n)
     float all = 0;
@@ -469,6 +476,7 @@ inline static void softmax(int n, const float *x, float *y) {
 }
 
 // find max index from data.
+// data: ℝ^n vector
 inline static size_t max_index(int n, const float *data) {
     float max = data[0];
     size_t max_index = 0;
@@ -482,6 +490,10 @@ inline static size_t max_index(int n, const float *data) {
 }
 
 // infer x: calulare fc -> relu -> softmax, then return max{y_i}
+// These are paremeter: 
+// A: M(m, n, ℝ) matrix
+// x: ℝ^n vector
+// b: ℝ^m vector
 inline static int inference3(const float *A, const float *b, const float *x, float *y) {
     float *y_tmp = malloc(sizeof(float) * 10);
     // A: 10x784, b: 10, x: 784
@@ -494,12 +506,14 @@ inline static int inference3(const float *A, const float *b, const float *x, flo
 }
 
 // softmax and loss's backward: ∂E/∂x_k = y_k - t_k
+// ∂E/∂x, y: ℝ^n vector
 inline static void softmaxwithloss_bwd(int n, const float *y, unsigned char t, float *dEdx) {
     copy(n, y, dEdx);
     dEdx[t] -= 1.0;
 }
 
 // relu's backward: ∂E/∂x_k = _/ * ∂E/∂y_k
+// ∂E/∂x, x: ℝ^n vector
 inline static void relu_bwd(int n, const float *x, const float *dEdy, float *dEdx) {
     rep(i, n) {
         dEdx[i] = (x[i] > 0.0) ? dEdy[i] : 0.0;
@@ -507,6 +521,9 @@ inline static void relu_bwd(int n, const float *x, const float *dEdy, float *dEd
 }
 
 // fc's backward: ∂E/∂x_k = a_k^T * ∂E/∂y, ∂E/∂a_k = ∂E/∂y_k * x^T, ∂E/∂b_k = ∂E/∂y_k
+// A, ∂E/∂A: M(m, n, ℝ) matrix
+// ∂E/∂b: ℝ^m vector
+// ∂E/∂y, ∂E/∂x: ℝ^n vector
 inline static void fc_bwd(int m, int n, const float *x, const float *dEdy, const float *A, float *dEdA, float *dEdb, float *dEdx){
     rep(i, m) {
         rep(j, n) {
@@ -526,6 +543,7 @@ inline static void fc_bwd(int m, int n, const float *x, const float *dEdy, const
 }
 
 // copy array.
+// x, y: ℝ^n
 inline static void copy(int n, const float *x, float *y) {
     rep(i, n) {
         y[i] = x[i];
@@ -533,6 +551,10 @@ inline static void copy(int n, const float *x, float *y) {
 }
 
 // 3 layer's backward: fc -> relu -> softmax, return ∂E/∂a_k, ∂E/∂b_k, ∂E/∂x_k
+// A, ∂E/∂A: M(m, n, ℝ) matrix
+// x: ℝ^n vector
+// b, ∂E/∂b: ℝ^m vector
+// y: ℝ^10 vector
 inline static void backward3(const float *A, const float *b, const float *x, unsigned char t, float *y, float *dEdA, float *dEdb) {
     // A: 10x784, b: 10, x: 784
     float *relu_x = malloc(sizeof(float) * 10);
@@ -560,6 +582,7 @@ inline static void swap_int(int *x, int *y) {
 }
 
 // shuffle array's element.
+// x: ℝ^n vector
 inline static void shuffle(int n, int *x) {
     rep(i, n) {
         int j = (int)rand() % n;
@@ -568,11 +591,13 @@ inline static void shuffle(int n, int *x) {
 }
 
 // calculate cross entoropy error with y and t.
+// y: ℝ^10 vector
 inline static float cross_entoropy_error(const float *y, int t) {
     return -log(y[t] + 1e-7);
 }
 
 // calculate o += x
+// x, o: ℝ^n vector
 inline static void add(int n, const float *x, float *o) {
     rep(i, n) {
         o[i] += x[i];
@@ -580,6 +605,8 @@ inline static void add(int n, const float *x, float *o) {
 }
 
 // calculate o *= x
+// o: ℝ^n vector
+// x ∈ ℝ
 inline static void scale(int n, float x, float *o) {
     rep(i, n) {
         o[i] *= x;
@@ -587,6 +614,8 @@ inline static void scale(int n, float x, float *o) {
 }
 
 // set x in o.
+// o: ℝ^n vector
+// x ∈ ℝ
 inline static void init(int n, float x, float *o) {
     rep(i, n) {
         o[i] = x;
@@ -594,6 +623,7 @@ inline static void init(int n, float x, float *o) {
 }
 
 // set random value in o: value ∈ [-1, 1].
+// o: ℝ^n vector
 inline static void rand_init(int n, float *o) {
     rep(i, n) {
         o[i] = (float)rand() / RAND_MAX * 2.0 - 1.0;
@@ -601,6 +631,10 @@ inline static void rand_init(int n, float *o) {
 }
 
 // infer x: calulare fc -> relu -> fc -> relu -> fc -> softmax, then return max{y_i}
+// These are paremeter: 
+// A: M(m, n, ℝ) matrix
+// x: ℝ^n vector
+// b: ℝ^m vector
 inline static int inference6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, float *y) {
     // A1: 50x784, b1: 50, x: 784
     // A2: 100x50, b2: 100,
@@ -622,6 +656,10 @@ inline static int inference6(const float *A1, const float *b1, const float *A2, 
 }
 
 // 6 layer's backward: fc -> relu -> softmax, return ∂E/∂a_k x 3, ∂E/∂b_k x 3, ∂E/∂x_k
+// A, ∂E/∂A: M(m, n, ℝ) matrix
+// x: ℝ^n vector
+// b, ∂E/∂b: ℝ^m vector
+// y: ℝ^10 vector
 inline static void backward6(const float *A1, const float *b1, const float *A2, const float *b2, const float *A3, const float *b3, const float *x, unsigned char t, float *y, float *dEdA1, float *dEdb1, float *dEdA2, float *dEdb2, float *dEdA3, float *dEdb3) {
     // A1: 50x784, b1: 50, x: 784
     // A2: 100x50, b2: 100,
@@ -663,7 +701,9 @@ inline static void backward6(const float *A1, const float *b1, const float *A2, 
     free(dEdx);
 }
 
-// save A: mxn, b: n -> filename.
+// save A and b -> filename.
+// A: M(m, n, ℝ) matrix
+// b: ℝ^n vector
 inline static void save(const char *filename, int m, int n, const float *A, const float *b) {
     FILE *fp;
     fp = fopen(filename, "wr");
@@ -677,6 +717,8 @@ inline static void save(const char *filename, int m, int n, const float *A, cons
 }
 
 // load A: mxn, b: n <- filename.
+// A: M(m, n, ℝ) matrix
+// b: ℝ^n vector
 inline static void load(const char *filename, int m, int n, float *A, float *b) {
     FILE *fp;
     fp = fopen(filename, "rb");
