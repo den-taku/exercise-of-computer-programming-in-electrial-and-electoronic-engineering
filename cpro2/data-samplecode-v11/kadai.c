@@ -19,7 +19,7 @@ static void copy(int n, const float *x, float *y);
 static void backward3(const float *A, const float *b, const float *x, unsigned char t, float *y, float *dEdA, float *dEdb);
 static void swap_int(int *x, int *y);
 static void shuffle(int n, int *x);
-static float cross_entoropy_error(const float *y, int t);
+static float cross_entropy_error(const float *y, int t);
 static void add(int n, const float *x, float *o);
 static void scale(int n, float x, float *o);
 static void init(int n, float x, float *o);
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
     float *dEdb3 = NULL;
 
     int select;
-    printf("NN inference for charactures.\n");
+    printf("NN inference for characters.\n");
     printf("3 layer: \n");
     printf("    learning:       type 1\n");
     printf("    correct rate:   type 2\n");
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
             if (inference3(A, b, test_x + i * width * height, y) == test_y[i]) {
                     ++sum;
                 }
-                error += cross_entoropy_error(y, test_y[i]);
+                error += cross_entropy_error(y, test_y[i]);
             }
             printf("        correct answer: %f%%\n", sum * 100.0 / test_count);
             printf("        cross entropy : %f\n", error * 100.0 / test_count);
@@ -287,7 +287,7 @@ int main(int argc, char *argv[]) {
                 if (inference6(A1, b1, A2, b2, A3, b3, test_x + i * width * height, y) == test_y[i]) {
                     ++sum;
                 }
-                error += cross_entoropy_error(y, test_y[i]);
+                error += cross_entropy_error(y, test_y[i]);
             }
             printf("		correct answer: %f%%\n", sum * 100.0 / test_count);
             printf("		cross entropy : %f\n", error * 100.0 / test_count);
@@ -489,8 +489,8 @@ inline static size_t max_index(int n, const float *data) {
     return max_index;
 }
 
-// infer x: calulare fc -> relu -> softmax, then return max{y_i}
-// These are paremeter: 
+// infer x: calculate fc -> relu -> softmax, then return max{y_i}
+// These are parameter: 
 // A: M(m, n, ℝ) matrix
 // x: ℝ^n vector
 // b: ℝ^m vector
@@ -590,9 +590,9 @@ inline static void shuffle(int n, int *x) {
     }
 }
 
-// calculate cross entoropy error with y and t.
+// calculate cross entropy error with y and t.
 // y: ℝ^10 vector
-inline static float cross_entoropy_error(const float *y, int t) {
+inline static float cross_entropy_error(const float *y, int t) {
     return -log(y[t] + 1e-7);
 }
 
@@ -630,8 +630,8 @@ inline static void rand_init(int n, float *o) {
     }
 }
 
-// infer x: calulare fc -> relu -> fc -> relu -> fc -> softmax, then return max{y_i}
-// These are paremeter: 
+// infer x: calculate fc -> relu -> fc -> relu -> fc -> softmax, then return max{y_i}
+// These are parameter: 
 // A: M(m, n, ℝ) matrix
 // x: ℝ^n vector
 // b: ℝ^m vector
